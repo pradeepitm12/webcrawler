@@ -1,11 +1,13 @@
 package utils
 
 import (
-		"io"
-			"golang.org/x/net/html"
-	"net/http"
 	"crypto/tls"
+	"io"
 	"log"
+	"net/http"
+	"strings"
+
+	"golang.org/x/net/html"
 )
 
 /**
@@ -30,7 +32,7 @@ func GetLinks(data io.Reader) []string {
 			for _, attribute := range token.Attr {
 				if attribute.Key == "href" {
 					//add link only if not present
-					if linkHash[attribute.Val] == 0 {
+					if linkHash[attribute.Val] == 0 && !strings.HasPrefix(attribute.Val, "#") && !strings.HasPrefix(attribute.Val, "/") {
 						linkHash[attribute.Val] = 1
 						links = append(links, attribute.Val)
 					}
@@ -39,6 +41,7 @@ func GetLinks(data io.Reader) []string {
 		}
 	}
 }
+
 /**
 * LinkReader
 * do a get request on the link

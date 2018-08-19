@@ -4,21 +4,23 @@ import (
 	"log"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
 	"strings"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 var (
 	redisPool *redis.Pool
 	redisConf RedisWriter
 )
+
 /**
 * NewPool
 * Prepares a pool of redis connection
  */
 
-func (r RedisWriter)NewPool() *redis.Pool {
-	config :=r
+func (r RedisWriter) NewPool() *redis.Pool {
+	config := r
 	return &redis.Pool{
 		MaxIdle:     config.RedisPoolMaxIdle,
 		MaxActive:   config.RedisPoolMaxActive,
@@ -35,10 +37,9 @@ func (r RedisWriter)NewPool() *redis.Pool {
 	}
 }
 
-func (r RedisWriter)InitRedisPool() {
+func (r RedisWriter) InitRedisPool() {
 	redisPool = r.NewPool()
 }
-
 
 type RedisWriter struct {
 	RedisAddress         string
@@ -48,23 +49,21 @@ type RedisWriter struct {
 	RedisPassword        string
 	//RedisPtr             *Redis
 }
+
 /**
 * Write
 * split the string on . and make domin as key and full url as value to Links hash in redis
  */
 func (r RedisWriter) Write(data string) {
 	key := strings.Split(data, ".")
-	if len(key)>1 {
-		rw:=NewRedis()
-		err:=rw.Hset("Links", key[0], []byte(data))
-		if err!=nil{
+	if len(key) > 1 {
+		rw := NewRedis()
+		err := rw.Hset("Links", key[0]+key[1], []byte(data))
+		if err != nil {
 			log.Fatal("Unable to write in redis", err)
 		}
 	}
 }
-
-
-
 
 /**
 * Redis Commands
