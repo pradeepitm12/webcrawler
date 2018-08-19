@@ -1,21 +1,23 @@
 package main
 
 import (
-	"fmt"
 	"flag"
-	"github.com/pradeepitm12/webcrawler/utils"
+	"fmt"
 	"os"
 	"sync"
+
+	"github.com/pradeepitm12/webcrawler/utils"
 )
+
 var wg = sync.WaitGroup{}
 
-func main(){
+func main() {
 	fmt.Println(" ****** This is a web crawler ******")
 	flag.Parse()
 	//take console input space seperated root links
 	rootLink := flag.Args()
 	//check if no input if given
-	if len(rootLink) <1{
+	if len(rootLink) < 1 {
 		fmt.Println("Please provide a link")
 		os.Exit(1)
 	}
@@ -26,25 +28,24 @@ func main(){
 	//fileWriter:=utils.FileWriter{FilePath:"/home/zaid/Desktop/Test.txt"}
 	//fileWriter.Init()
 	var w utils.Writer = utils.ConsoleWriter{}
-
-
-	pipe:=make(chan string,10)
-	for _,link:=range rootLink{
+	//var w utils.Writer = utils.RedisWriter{RedisAddress: "127.0.0.1:6379", RedisPassword: "redis@123"}
+	pipe := make(chan string, 10)
+	for _, link := range rootLink {
 		/**
 		* 1. Write on console.
 		* 2. Write in File
 		* X. For future use like Write in Redis, Kafka, or what ever is required.
-		*/
-		pipe<-link
+		 */
+		pipe <- link
 		wg.Add(1)
-		go  DataTransfer(utils.LinkReader(<-pipe),w)
+		go DataTransfer(utils.LinkReader(<-pipe), w)
 
 	}
 	wg.Wait()
 }
 func DataTransfer(data []string, writer utils.Writer) {
 
-	for _,link:=range data{
+	for _, link := range data {
 		writer.Write(link)
 	}
 	wg.Done()
