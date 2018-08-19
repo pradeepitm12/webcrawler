@@ -1,17 +1,23 @@
 package utils
 
 import (
-	"crypto/tls"
-	"io"
-	"log"
+		"io"
+			"golang.org/x/net/html"
 	"net/http"
-
-	"golang.org/x/net/html"
+	"crypto/tls"
+	"log"
 )
 
+/**
+* GetLinks
+* For the body received
+* if token of body is starttoken and is of <a>
+* itterate over all the attributes and look for href to get the links
+* put all the links in map with value as 1 :- this ensures that links are not repeted
+* return all the links as an array
+ */
 func GetLinks(data io.Reader) []string {
 	links := []string{}
-	//temp:= []string{}
 	linkHash := make(map[string]int)
 	page := html.NewTokenizer(data)
 	for {
@@ -33,6 +39,11 @@ func GetLinks(data io.Reader) []string {
 		}
 	}
 }
+/**
+* LinkReader
+* do a get request on the link
+* pass the request body to get all the links as array
+ */
 
 func LinkReader(link string) []string {
 	transport := &http.Transport{
@@ -43,10 +54,8 @@ func LinkReader(link string) []string {
 	client := http.Client{Transport: transport}
 	resp, err := client.Get(link)
 	if err != nil {
-		//fmt.Println("Error while client.Get(link) : ", err)
 		log.Fatal("Error while client.Get(link) : ", err)
 	}
 	defer resp.Body.Close()
 	return GetLinks(resp.Body)
-
 }

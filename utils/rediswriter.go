@@ -5,14 +5,20 @@ import (
 	"time"
 
 	"github.com/garyburd/redigo/redis"
+	"strings"
 )
 
 var (
 	redisPool *redis.Pool
+	redisConf RedisWriter
 )
+/**
+* NewPool
+* Prepares a pool of redis connection
+ */
 
-func NewPool() *redis.Pool {
-	config := RedisWriter{}
+func (r RedisWriter)NewPool() *redis.Pool {
+	config :=r
 	return &redis.Pool{
 		MaxIdle:     config.RedisPoolMaxIdle,
 		MaxActive:   config.RedisPoolMaxActive,
@@ -29,13 +35,36 @@ func NewPool() *redis.Pool {
 	}
 }
 
-func InitRedisPool() {
-	config := RedisWriter{}
-	log.Println("Redis *********")
-	log.Printf("Init Redis Connection pool with params: RedisAddress = %s, MaxIdle = %d, MaxActive = %d, IdleTimeout = %d(s)",
-		config.RedisAddress, config.RedisPoolMaxIdle, config.RedisPoolMaxActive, config.RedisPoolIdleTimeout)
-	redisPool = NewPool()
+func (r RedisWriter)InitRedisPool() {
+	redisPool = r.NewPool()
 }
+
+
+type RedisWriter struct {
+	RedisAddress         string
+	RedisPoolMaxIdle     int
+	RedisPoolMaxActive   int
+	RedisPoolIdleTimeout int
+	RedisPassword        string
+	//RedisPtr             *Redis
+}
+/**
+* Write
+* split the string on . and make domin as key and full url as value to Links hash in redis
+ */
+func (r RedisWriter) Write(data string) {
+	key := strings.Split(data, ".")
+	if len(key)>1 {
+		rw:=NewRedis()
+		err:=rw.Hset("Links", key[0], []byte(data))
+		if err!=nil{
+			log.Fatal("Unable to write in redis", err)
+		}
+	}
+}
+
+
+
 
 /**
 * Redis Commands
@@ -49,7 +78,6 @@ type Redis struct {
 func NewRedis() *Redis {
 	conn := redisPool.Get()
 	log.Printf("Get conn from redis_conn_pool, active connections in the pool is %d", redisPool.ActiveCount())
-	//conn.Do("AUTH", "redis@123@Azure")
 	return &Redis{
 		conn: conn,
 	}
