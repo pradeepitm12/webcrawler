@@ -48,7 +48,7 @@ func GetLinks(data io.Reader) []string {
 * pass the request body to get all the links as array
  */
 
-func LinkReader(link string) []string {
+func Work(link string) []string {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
@@ -61,4 +61,10 @@ func LinkReader(link string) []string {
 	}
 	defer resp.Body.Close()
 	return GetLinks(resp.Body)
+}
+
+func CrawlWorker(input <-chan string, output chan<- []string) {
+	for work := range input {
+		output <- Work(work)
+	}
 }

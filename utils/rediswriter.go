@@ -2,9 +2,8 @@ package utils
 
 import (
 	"log"
-	"time"
-
 	"strings"
+	"time"
 
 	"github.com/garyburd/redigo/redis"
 )
@@ -54,13 +53,13 @@ type RedisWriter struct {
 * Write
 * split the string on . and make domin as key and full url as value to Links hash in redis
  */
-func (r RedisWriter) Write(data string) {
-	key := strings.Split(data, ".")
-	if len(key) > 1 {
-		rw := NewRedis()
+func (r RedisWriter) Write(datapipe <-chan string) {
+	rw := NewRedis()
+	for data := range datapipe {
+		key := strings.Split(data, ".")
 		err := rw.Hset("Links", key[0]+key[1], []byte(data))
 		if err != nil {
-			log.Fatal("Unable to write in redis", err)
+			log.Fatalln("Unable to write in redis")
 		}
 	}
 }

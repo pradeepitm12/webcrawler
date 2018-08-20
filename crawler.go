@@ -4,12 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/pradeepitm12/webcrawler/utils"
-	)
+)
 
-var wg = sync.WaitGroup{}
+//var wg = sync.WaitGroup{}
+
 /**
 * for each root links
 * collect all the links as an array of strings
@@ -22,7 +22,7 @@ var wg = sync.WaitGroup{}
 * redisWriter:=utils.RedisWriter{RedisAddress: "127.0.0.1:6379", RedisPassword: "redis@123",
 * RedisPoolIdleTimeout:100,RedisPoolMaxActive:100,RedisPoolMaxIdle:100}
 * redisWriter.InitRedisPool()
-*/
+ */
 func main() {
 	fmt.Println(" ****** This is a web crawler ******")
 	flag.Parse()
@@ -37,33 +37,28 @@ func main() {
 	* writing links to redis,
 	* links can be written in file or console as well.
 	 */
-	redisWriter:=utils.RedisWriter{RedisAddress: "127.0.0.1:6379", RedisPassword: "redis@123",RedisPoolIdleTimeout:100,RedisPoolMaxActive:100,RedisPoolMaxIdle:100}
+	redisWriter := utils.RedisWriter{RedisAddress: "127.0.0.1:6379", RedisPassword: "redis@123@Azure", RedisPoolIdleTimeout: 100, RedisPoolMaxActive: 100, RedisPoolMaxIdle: 100}
 	redisWriter.InitRedisPool()
-	var w utils.Writer =redisWriter
+	var w utils.Writer = redisWriter
 	// initilize a buffered channel of string
-	pipe := make(chan string, 10)
-	// iterate through all the links given by command line
+	input := make(chan string, 10)
+	output := make(chan []string, 10)
+	writerPipe := make(chan string, 10)
+	const numberOfWorkers = 3
+	for i := 0; i < numberOfWorkers; i++ {
+		go utils.CrawlWorker(input, output)
+		//for j := 0; j < numberOfWorkers; j++ {
+		go w.Write(writerPipe)
+		//}
+	}
+
 	for _, link := range rootLink {
-		//putting links in the pipe
-		pipe <- link
-		// adding the number of process in wait group so main knows when to stop
-		wg.Add(1)
-		//go routine started for items in pipe
-		go DataTransfer(utils.LinkReader(<-pipe), w)
-
+		input <- link
 	}
-	// main waits till last item in wait group
-	wg.Wait()
-}
-/**
-* DataTransfer
-* For slice of an array of links
-* write all the links in the type of writer received
- */
-func DataTransfer(data []string, writer utils.Writer) {
-
-	for _, link := range data {
-		writer.Write(link)
+	for linkarray := range output {
+		for _, link := range linkarray {
+			fmt.Println("ready to be written --- ", link)
+			writerPipe <- link
+		}
 	}
-	wg.Done()
 }
