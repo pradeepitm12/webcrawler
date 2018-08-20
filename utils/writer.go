@@ -2,7 +2,7 @@ package utils
 
 /**
 * writer
-* Writer
+* Write
 * A behaviour which takes a string input channel
  */
 type Writer interface {

@@ -37,26 +37,29 @@ func main() {
 	* writing links to redis,
 	* links can be written in file or console as well.
 	 */
-	redisWriter := utils.RedisWriter{RedisAddress: "127.0.0.1:6379", RedisPassword: "redis@123@Azure", RedisPoolIdleTimeout: 100, RedisPoolMaxActive: 100, RedisPoolMaxIdle: 100}
+	redisWriter := utils.RedisWriter{RedisAddress: "127.0.0.1:6379", RedisPassword: "redis@123", RedisPoolIdleTimeout: 100, RedisPoolMaxActive: 100, RedisPoolMaxIdle: 100}
 	redisWriter.InitRedisPool()
 	var w utils.Writer = redisWriter
 	// initilize a buffered channel of string
 	input := make(chan string, 10)
 	output := make(chan []string, 10)
-	writerPipe := make(chan string, 10)
+	writerPipe := make(chan string, 5)
 	const numberOfWorkers = 3
 	for i := 0; i < numberOfWorkers; i++ {
 		go utils.CrawlWorker(input, output)
-		//for j := 0; j < numberOfWorkers; j++ {
-		go w.Write(writerPipe)
-		//}
+		for j := 0; j < numberOfWorkers; j++ {
+			go w.Write(writerPipe)
+		}
 	}
 
 	for _, link := range rootLink {
+		defer close(input)
 		input <- link
 	}
 	for linkarray := range output {
+		defer close(output)
 		for _, link := range linkarray {
+			defer close(writerPipe)
 			fmt.Println("ready to be written --- ", link)
 			writerPipe <- link
 		}

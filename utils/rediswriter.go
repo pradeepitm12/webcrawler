@@ -57,7 +57,13 @@ func (r RedisWriter) Write(datapipe <-chan string) {
 	rw := NewRedis()
 	for data := range datapipe {
 		key := strings.Split(data, ".")
-		err := rw.Hset("Links", key[0]+key[1], []byte(data))
+		var title string
+		if len(key)>1{
+			title=key[0]+key[1]
+		}else{
+			title=key[0]
+		}
+		err := rw.Hset("Links", title, []byte(data))
 		if err != nil {
 			log.Fatalln("Unable to write in redis")
 		}

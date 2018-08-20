@@ -60,9 +60,13 @@ func Work(link string) []string {
 		log.Fatal("Error while client.Get(link) : ", err)
 	}
 	defer resp.Body.Close()
-	return GetLinks(resp.Body)
+ 	return  GetLinks(resp.Body)
 }
-
+/**
+* CrawlWorker
+* takes job as string pass it to work
+* string array from work is passed to string array channel
+ */
 func CrawlWorker(input <-chan string, output chan<- []string) {
 	for work := range input {
 		output <- Work(work)
