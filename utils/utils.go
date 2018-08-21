@@ -10,6 +10,17 @@ import (
 	"golang.org/x/net/html"
 )
 
+type PipeLine struct {
+	Input     chan string
+	Output    chan []string
+	Write     chan string
+	CheckHash map[string]int
+}
+
+func GetPipeLine() *PipeLine {
+	return &PipeLine{make(chan string, 10), make(chan []string, 10), make(chan string, 5), make(map[string]int)}
+}
+
 /**
 * GetLinks
 * For the body received
@@ -18,9 +29,9 @@ import (
 * put all the links in map with value as 1 :- this ensures that links are not repeted
 * return all the links as an array
  */
-func GetLinks(data io.Reader) []string {
+func (pipe *PipeLine) GetLinks(data io.Reader) []string {
 	links := []string{}
-	linkHash := make(map[string]int)
+	//linkHash := pipe.checkHash
 	page := html.NewTokenizer(data)
 	for {
 		tokenType := page.Next()
@@ -32,9 +43,10 @@ func GetLinks(data io.Reader) []string {
 			for _, attribute := range token.Attr {
 				if attribute.Key == "href" {
 					//add link only if not present
-					if linkHash[attribute.Val] == 0 && !strings.HasPrefix(attribute.Val, "#") && !strings.HasPrefix(attribute.Val, "/") {
-						linkHash[attribute.Val] = 1
-						links = append(links, attribute.Val)
+					aV := attribute.Val
+					if pipe.CheckHash[aV] == 0 && !strings.HasPrefix(aV, "#") && !strings.HasPrefix(aV, "/") {
+						pipe.CheckHash[aV] = 1
+						links = append(links, aV)
 					}
 				}
 			}
@@ -48,27 +60,33 @@ func GetLinks(data io.Reader) []string {
 * pass the request body to get all the links as array
  */
 
-func Work(link string) []string {
+func (pipe *PipeLine) Work(link string) []string {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
 	}
 	client := http.Client{Transport: transport}
-	resp, err := client.Get(link)
+
+	resp, err := client.Get(CheckLink(link))
 	if err != nil {
-		log.Fatal("Error while client.Get(link) : ", err)
+		log.Println("Error while client.Get(link) : ", err)
 	}
 	defer resp.Body.Close()
- 	return  GetLinks(resp.Body)
+	return pipe.GetLinks(resp.Body)
 }
+
 /**
 * CrawlWorker
 * takes job as string pass it to work
 * string array from work is passed to string array channel
  */
-func CrawlWorker(input <-chan string, output chan<- []string) {
-	for work := range input {
-		output <- Work(work)
+func (pipe *PipeLine) CrawlWorker() {
+	for work := range pipe.Input {
+		pipe.Output <- pipe.Work(work)
 	}
+}
+
+func CheckLink(link string) string {
+	return strings.Split(link, ";")[0]
 }

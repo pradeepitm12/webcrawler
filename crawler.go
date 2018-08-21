@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/pradeepitm12/webcrawler/utils"
 )
@@ -37,31 +39,38 @@ func main() {
 	* writing links to redis,
 	* links can be written in file or console as well.
 	 */
-	redisWriter := utils.RedisWriter{RedisAddress: "127.0.0.1:6379", RedisPassword: "redis@123", RedisPoolIdleTimeout: 100, RedisPoolMaxActive: 100, RedisPoolMaxIdle: 100}
-	redisWriter.InitRedisPool()
-	var w utils.Writer = redisWriter
-	// initilize a buffered channel of string
-	input := make(chan string, 10)
-	output := make(chan []string, 10)
-	writerPipe := make(chan string, 5)
+
+	var w utils.Writer = utils.FileWriter{FilePath: "/home/pradheep/Desktop/Crawler.txt"}
+
+	//pipeLine := utils.PipeLine{make(chan string, 10), make(chan []string, 10), make(chan string, 5)}
+	pipeLine := utils.GetPipeLine()
+	//fmt.Println("First ", pipeLine)
 	const numberOfWorkers = 3
 	for i := 0; i < numberOfWorkers; i++ {
-		go utils.CrawlWorker(input, output)
+		go pipeLine.CrawlWorker()
 		for j := 0; j < numberOfWorkers; j++ {
-			go w.Write(writerPipe)
+			go w.Write(pipeLine.Write)
 		}
 	}
 
 	for _, link := range rootLink {
-		defer close(input)
-		input <- link
+		defer close(pipeLine.Input)
+		pipeLine.Input <- link
 	}
-	for linkarray := range output {
-		defer close(output)
+	for linkarray := range pipeLine.Output {
+		defer close(pipeLine.Output)
 		for _, link := range linkarray {
-			defer close(writerPipe)
-			fmt.Println("ready to be written --- ", link)
-			writerPipe <- link
+			defer close(pipeLine.Write)
+			// adding check for host name
+			// start putting new links to input if they have redhat has hostname
+			rawUrl, _ := url.Parse(link)
+			if strings.Contains(rawUrl.Hostname(), "red") {
+				fmt.Println("Writing link ", link)
+				pipeLine.Input <- link
+				//	fmt.Println("added to input   ", link)
+			}
+			pipeLine.Write <- link
 		}
 	}
+	//fmt.Println("First ", pipeLine)
 }

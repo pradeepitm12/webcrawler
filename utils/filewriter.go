@@ -18,10 +18,11 @@ func (f FileWriter) Write(datapipe <-chan string) {
 	defer file.Close()
 	for data := range datapipe {
 		_, err := file.WriteString(data + "\n")
-		log.Println("Message while writing ", data)
+		//log.Println("Message while writing ", data)
 		if err != nil {
 			log.Println("Error in writing ", err)
 		}
+		file.Sync()
 	}
-	file.Sync()
+
 }
